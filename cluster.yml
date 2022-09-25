@@ -1,0 +1,104 @@
+nodes:
+  - address: xxx.xx.xxx.xx
+    internal_address: xxx.xx.xxx.xx
+    user: rke
+    role: [controlplane,etcd]
+
+  - address: xxx.xx.xxx.xx
+    internal_address: xxx.xx.xxx.xx
+    user: rke
+    role: [worker]
+
+  - address: xxx.xx.xxx.xx
+    internal_address: xxx.xx.xxx.xx
+    user: rke
+    role: [worker]
+
+
+kubernetes_version: "v1.20.4-rancher1-1"
+
+cluster_name: "rke-dev"
+
+addon_job_timeout: 30
+authentication:
+  strategy: x509
+ignore_docker_version: true
+
+ingress:
+  provider: nginx
+  extra_args:
+    default-ssl-certificate: "ingress-nginx/ingress-default-cert"
+  
+network:
+  options:
+    flannel_backend_type: vxlan
+  plugin: canal
+
+services:
+  etcd:
+    backup_config:
+      interval_hours: 12
+      retention: 6
+      safe_timestamp: false
+    creation: 12h
+    extra_args:
+      election-timeout: 5000
+      heartbeat-interval: 500
+    gid: 1000
+    retention: 72h
+    snapshot: false
+    uid: 1000
+  kube_api:
+    always_pull_images: true
+    pod_security_policy: true
+    service_node_port_range: 30000-32767
+    event_rate_limit:
+      enabled: true
+    audit_log:
+      enabled: true
+    secrets_encryption_config:
+      enabled: true
+    extra_args:
+      anonymous-auth: "false"
+      enable-admission-plugins: "ServiceAccount,NamespaceLifecycle,LimitRanger,PersistentVolumeLabel,DefaultStorageClass,ResourceQuota,DefaultTolerationSeconds,AlwaysPullImages,DenyEscalatingExec,NodeRestriction,EventRateLimit,PodSecurityPolicy"
+      profiling: "false"
+      service-account-lookup: "true"
+      tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
+    extra_binds:
+      - "/opt/kubernetes:/opt/kubernetes"
+  kubelet:
+    generate_serving_certificate: true
+    extra_args:
+      feature-gates: "RotateKubeletServerCertificate=true"
+      protect-kernel-defaults: "false"
+      tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
+  kube-controller:
+    extra_args:
+      profiling: "false"
+      address: "0.0.0.0"
+      terminated-pod-gc-threshold: "1000"
+      feature-gates: "RotateKubeletServerCertificate=true"
+  scheduler:
+    extra_args:
+      profiling: "false"
+      address: "0.0.0.0"
+dns:
+    provider: coredns
+    upstreamnameservers:
+    - 1.1.1.1
+    - 8.8.4.4
+ssh_agent_auth: False
+ssh_key_path: /home/rke/.ssh/id_rsa
+
+addons: |-
+  ---
+  apiVersion: v1
+  data:
+    tls.crt:
+    tls.key :
+  kind: Secret
+  metadata:
+    creationTimestamp: null
+    name: ingress-default-cert
+    namespace: ingress-nginx
+  type: kubernetes.io/tls
